@@ -722,99 +722,93 @@
 
     window.showConfirmation = showConfirmation;
 
-    async function submitForm(){
-      const dietary = document.getElementById('dietary').value || 'None';
-      const music   = document.getElementById('music').value || 'None';
-      const tableDiv = [...document.querySelectorAll('.table')].find(t => t.dataset.id == selectedTable);
-      const selectedSeatEls = tableDiv ? [...tableDiv.querySelectorAll('.seat.selected')] : [];
-      const seatsSelected = selectedSeatEls.length;
-      const fileInput = document.getElementById('paymentProof');
-      const file = fileInput.files[0] || null;
+async function submitForm() {
+  try {
+    // Grab form data
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const studentClass = document.getElementById('classSelect').value;
+    const dietary = document.getElementById('dietary').value.trim();
+    const music = document.getElementById('music').value.trim();
 
-      const firstName = document.getElementById('firstName').value.trim();
-      const lastName  = document.getElementById('lastName').value.trim();
-      const studentClass = document.getElementById('classSelect').value;
+    const tableDiv = [...document.querySelectorAll('.table')].find(t => t.dataset.id == selectedTable);
+    const seatsSelected = tableDiv
+      ? [...tableDiv.querySelectorAll('.seat.selected')].map(s => s.dataset.seatNumber).join(', ')
+      : '';
 
-      if(!selectedTable || seatsSelected < 1){
-        alert('Please select a table and at least 1 seat before submitting.');
-        return;
-      }
+    const fileInput = document.getElementById('paymentProof');
+    let fileBase64 = '';
+    let fileType = '';
+    let fileName = '';
 
-      const selectedSeatNumbers = selectedSeatEls.map(s => s.dataset.seatNumber);
-
-      const doc = {
-        type: 'matric_dance_booking',
-        firstName,
-        lastName,
-        class: studentClass,
-        table: selectedTable,
-        seats: seatsSelected,
-        seatNumbers: selectedSeatNumbers, 
-        dietary,
-        music,
-        timestamp: new Date().toISOString()
-      };
-
-      const COUCH_URL = 'http://localhost:5984/matricdance';
-      const COUCH_USER = 'admin';          
-      const COUCH_PASS = 'password_here';  
-
-      try {
-        const response = await fetch(COUCH_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + btoa(COUCH_USER + ':' + COUCH_PASS)
-          },
-          body: JSON.stringify(doc)
-        });
-
-        if(!response.ok){
-          const errorText = await response.text();
-          alert('Error saving booking: ' + errorText);
-          return;
-        }
-
-        const result = await response.json();
-        const docId = result.id;
-        const revId = result.rev;
-
-        if(file){
-          const attachResponse = await fetch(`${COUCH_URL}/${encodeURIComponent(docId)}/${encodeURIComponent(file.name)}?rev=${encodeURIComponent(revId)}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': file.type || 'application/octet-stream',
-              'Authorization': 'Basic ' + btoa(COUCH_USER + ':' + COUCH_PASS)
-            },
-            body: file
-          });
-
-          if(!attachResponse.ok){
-            const attachError = await attachResponse.text();
-            alert('Error uploading file: ' + attachError);
-            return;
-          }
-        }
-
-        selectedSeatNumbers.forEach(no => bookedSet.add(seatKey(selectedTable, no)));
-        saveBookedSet(bookedSet);
-
-        selectedSeatEls.forEach(seatEl => {
-          seatEl.classList.remove('selected');
-          seatEl.classList.add('booked');
-          seatEl.style.pointerEvents = 'none';
-        });
-
-        alert('Booking saved successfully!'); 
-        showStep(6); // show the thank-you step
-
-
-      } catch (err) {
-        alert('Failed to connect to CouchDB: ' + err.message);
-      }
+    if(fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      fileType = file.type;
+      fileName = file.name;
+      fileBase64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]); // strip data:mime;base64
+        reader.onerror = e => reject(e);
+        reader.readAsDataURL(file);
+      });
     }
 
-    window.submitForm = submitForm;
-  </script>
+    const payload = {
+      firstName,
+      lastName,
+      class: studentClass,
+      table: selectedTable,
+      seats: seatsSelected,
+      dietary,
+      music,
+      fileName,
+      fileBase64,
+      fileType
+    };
+    
+function doPost(e) {
+  var output = ContentService.createTextOutput();
+  output.setMimeType(ContentService.MimeType.JSON);
+  
+  var result = { status: 'success', message: '', fileUrl: '' };
+  
+  try {
+    // handle payload here...
+    result.message = 'Received';
+  } catch(err) {
+    result.status = 'error';
+    result.message = err.message;
+  }
+
+  // Allow CORS
+  output.setContent(JSON.stringify(result));
+  return output;
+}
+
+    // POST to Google Apps Script
+    const response = await fetch('https://script.google.com/macros/s/AKfycbwrvnc6Pc82-nWZslHbg4EXfBDu3Q38jfeNBSrLwf_pHGWt_pIxNvd_jRXTot_npfmQyg/exec', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if(result.status === 'success') {
+      alert('Submission successful! You can see your uploaded file here: ' + (result.fileUrl || 'No attachment'));
+      nextStep(); // move to thank-you step
+    } else {
+      alert('Error: ' + result.message);
+    }
+
+  } catch(err) {
+    alert('Failed to submit: ' + err.message);
+  }
+}
+
+// Make globally accessible
+window.submitForm = submitForm;
+</script>
+
 </body>
 </html>
