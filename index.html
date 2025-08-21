@@ -65,29 +65,30 @@
   .step h2 { text-align:center; color: var(--brand-gold); font-family: "Garamond", serif; font-size: clamp(18px,2.5vw,28px); margin: 6px 0 12px 0; text-shadow: 1px 1px 2px rgba(0,0,0,.15); }
 
   .controls { display: grid; gap: 10px; width: min(760px,95%); margin: 0 auto; }
-  .control { width: 100%; border-radius: 10px; border:1px solid var(--brand-gold); font-size:16px; padding:12px 14px; outline:none; transition: box-shadow .15s ease, transform .05s ease; background:#fff; }
+  .control { width: 100%; border-radius: 10px; border:1px solid var(--brand-gold); font-size:16px; padding:12px 14px; outline:none; transition: box-shadow .15s ease, transform .05s ease; background:#fff;}
   .control:focus { box-shadow: var(--focus); }
 
   .caption { text-align:center; color:#444; font-style:italic; margin:6px 0 12px 0; }
   .buttons { text-align:center; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:14px; }
   .btn {
-    background: var(--brand-gold); color:#fff; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-size:16px; font-weight:700; transition: transform .08s ease, background .2s ease, box-shadow .2s ease; box-shadow: 0 2px 10px rgba(0,0,0,.15);
+    background: var(--brand-gold); color:#fff; border:none; padding:12px 20px; border-radius:10px; cursor:pointer; font-size:16px; font-weight:700; transition: transform .08s ease, background .2s ease;
   }
   .btn:hover { background: var(--brand-gold-light); color:#000; transform:translateY(-1px); }
   .btn:active { transform:translateY(0); }
 
-  .floor { position:relative; width:100%; min-height:100vh; max-height:90vh; overflow:auto; margin:0 auto 16px auto; background: var(--floor); border:2px solid var(--brand-gold); border-radius: var(--radius); }
-  .table { position:absolute; background:#ffd700; border-radius:50%; width:84px; height:84px; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; cursor:pointer; font-weight:bold; color:#333; transition: transform .15s ease, box-shadow .2s ease; box-shadow: 0 2px 10px rgba(0,0,0,.25); user-select:none; }
+  .floor { position:relative; width:100%; min-height:100vh; max-height:90vh; overflow:auto; margin:0 auto 16px auto; background: var(--floor); border:2px solid var(--brand-gold); border-radius: var(--radius-lg); }
+
+  .table { position:absolute; background:#ffd700; border-radius:50%; width:84px; height:84px; display:flex; flex-wrap:wrap; justify-content:center; align-items:center; cursor:pointer; font-weight:bold; flex-direction:column; box-shadow: 0 2px 8px rgba(0,0,0,0.13); border:2px solid #bfa34d; }
   .table.square { border-radius:12px; width:104px; height:104px; background: var(--brand-gold); color:#fff; }
   .table__label { width:100%; text-align:center; font-weight:800; font-size:13px; pointer-events:none; }
-  .seat { width:18px; height:18px; background:#fff; border:1px solid var(--brand-gold); border-radius:50%; margin:2px; cursor:pointer; transition: transform .05s ease, background .2s ease, box-shadow .15s ease, opacity .2s ease; }
+  .seat { width:18px; height:18px; background:#fff; border:1px solid var(--brand-gold); border-radius:50%; margin:2px; cursor:pointer; transition: transform .05s ease, background .2s ease, box-shadow .15s; display:inline-block;}
   .seat:hover { transform:scale(1.06); }
   .seat.selected { background: var(--brand-gold); box-shadow: inset 0 0 0 2px #fff; }
   .seat.booked { background:#ccc; pointer-events:none; cursor:not-allowed; opacity:.7; }
 
-  .dancefloor { position:absolute; display:flex; justify-content:center; align-items:center; font-weight:800; font-size:3vw; color:#222; border:2px solid var(--brand-gold); border-radius:1.5vw; background:#eee8dc; box-shadow: inset 0 0 12px rgba(0,0,0,.15); }
+  .dancefloor { position:absolute; display:flex; justify-content:center; align-items:center; font-weight:800; font-size:3vw; color:#222; border:2px solid var(--brand-gold); border-radius:1.5vw; background:#ffeec9; z-index:1; text-align:center; }
 
-  #confirmation { background: var(--bg-soft); border:1px solid var(--brand-gold); padding:18px; border-radius:12px; text-align:left; font-size:16px; line-height:1.55; color:#222; width:min(760px,95%); margin:0 auto; }
+  #confirmation { background: var(--bg-soft); border:1px solid var(--brand-gold); padding:18px; border-radius:12px; text-align:left; font-size:16px; line-height:1.55; color:#222; width:min(760px,95%); margin:0 auto 14px auto; }
   #contact { text-align:center; margin:6px 0 22px 0; font-size:14px; color:#222; font-style:italic; }
 
   .slider { width:min(1000px,96%); margin:18px auto 24px auto; overflow:hidden; border-radius:var(--radius); box-shadow: var(--shadow-strong); border:1px solid rgba(0,0,0,.08); background:#000; }
@@ -244,6 +245,11 @@ function saveBookedSet(){ localStorage.setItem(STORAGE_KEY,JSON.stringify([...bo
 
 function showStep(i){ document.querySelectorAll('.step').forEach(s=>s.classList.remove('active')); document.getElementById(`step${i}`).classList.add('active'); currentStep=i; }
 
+function getSelectedSeats(){
+  // Get ALL selected seats, regardless of table
+  return [...document.querySelectorAll('.seat.selected')];
+}
+
 function nextStep(){
   if(currentStep===0){
     const f=document.getElementById('firstName').value.trim();
@@ -253,9 +259,9 @@ function nextStep(){
   }
   if(currentStep===2){
     if(!selectedTable){ alert('Please select a table before continuing.'); return; }
-    const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
-    const seats=[...t.querySelectorAll('.seat.selected')];
-    if(seats.length<1){ alert('Please select at least 1 seat for your table.'); return; }
+    const selectedSeats=getSelectedSeats();
+    if(selectedSeats.length < 1){ alert('Please select at least 1 seat.'); return; }
+    if(selectedSeats.length > 2){ alert('You cannot select more than 2 seats in total.'); return; }
     showConfirmation();
   }
   showStep(Math.min(currentStep+1,totalSteps));
@@ -303,11 +309,13 @@ function buildFloor(){
       const d=document.createElement('div');
       d.className='dancefloor'; d.style.top=t.top+'px'; d.style.left=t.left+'px';
       d.style.width=t.width+'px'; d.style.height=t.height+'px'; d.textContent=t.label||'DANCE FLOOR';
+      d.style.position = "absolute";
       floor.appendChild(d); return;
     }
     const table=document.createElement('div');
     table.className='table'; if(t.type==='square') table.classList.add('square');
     table.style.top=t.top+'px'; table.style.left=t.left+'px'; table.dataset.id=t.id;
+    table.style.position = "absolute";
     const label=document.createElement('div'); label.className='table__label'; label.textContent=t.label||t.id; table.appendChild(label);
 
     if(t.seats){
@@ -317,8 +325,11 @@ function buildFloor(){
         if(bookedSet.has(seatKey(t.id,i+1))) seat.classList.add('booked');
         else seat.addEventListener('click', e=>{
           e.stopPropagation();
-          const selectedSeats=[...table.querySelectorAll('.seat.selected')];
-          if(!seat.classList.contains('selected') && selectedSeats.length>=2){ alert('Max 2 seats per table.'); return; }
+          const selectedSeats=getSelectedSeats();
+          if(!seat.classList.contains('selected') && selectedSeats.length>=2){
+            alert('Max 2 seats total may be selected.');
+            return;
+          }
           seat.classList.toggle('selected');
         });
         table.appendChild(seat);
@@ -330,6 +341,7 @@ function buildFloor(){
   });
 }
 function showConfirmation(){
+  // Only show seats at selectedTable
   const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
   const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
   const f=document.getElementById('firstName').value.trim();
@@ -360,6 +372,8 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
     const c=document.getElementById('classSelect').value;
     const d=document.getElementById('dietary').value.trim();
     const m=document.getElementById('music').value.trim();
+
+    // Only book seats at selectedTable
     const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
     const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
 
@@ -384,9 +398,8 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
     showStep(6);
   }catch(err){ alert('❌ Submission failed: '+err.message); submitBtn.disabled=false; submitBtn.textContent='Submit'; }
 });
+
+buildFloor();
 </script>
 </body>
 </html>
-
-
-
