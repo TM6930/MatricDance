@@ -95,7 +95,6 @@
       border-radius: var(--radius);
       padding: 14px 18px;
       width: min(95%, 720px);
-      border: 1px solid rgba(255,215,0,.28);
     }
 
 
@@ -472,6 +471,15 @@
           <button class="btn" type="button" onclick="submitForm()">Submit</button>
         </div>
       </section>
+
+     <section class="step" id="step6" aria-labelledby="s6-title">
+       <h2 id="s6-title">Thank You!</h2>
+       <p class="caption">
+         Your submission has been received. No edits can be made.<br>
+          We can’t wait to see you at the Matric Dance! 🎉
+       </p>
+      </section>
+
     </main>
 
     <p id="contact">For assistance, contact us at <strong>mjarvis@jeppegirls.co.za</strong></p>
@@ -521,7 +529,7 @@
     })();
 
     let currentStep = 0;
-    const totalSteps = 5;
+    const totalSteps = 6;
     let selectedTable = null;
 
     function showStep(index){
@@ -802,7 +810,8 @@
           seatEl.style.pointerEvents = 'none';
         });
 
-        alert('Booking ' + (file ? '+ proof of payment ' : '') + 'saved successfully! Seats are now booked.');
+        alert('Booking saved successfully!'); 
+        showStep(6); // show the thank-you step
 
 
       } catch (err) {
