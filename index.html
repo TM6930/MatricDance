@@ -329,8 +329,6 @@ function buildFloor(){
     floor.appendChild(table);
   });
 }
-buildFloor();
-
 function showConfirmation(){
   const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
   const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
@@ -389,5 +387,6 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
 </script>
 </body>
 </html>
+
 
 
