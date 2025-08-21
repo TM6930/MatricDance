@@ -389,6 +389,8 @@
     </section>
 
     <main class="steps" role="main">
+   <form id="mdForm" method="POST" action="/submit-endpoint">
+     <input type="hidden" name="payload" id="payloadInput" />
 
       <section class="step active" id="step0" aria-labelledby="s0-title">
         <h2 id="s0-title">Welcome to the Matric Dance Portal</h2>
@@ -462,7 +464,8 @@
         <div id="confirmation" aria-live="polite"></div>
         <div class="buttons">
           <button class="btn" type="button" onclick="prevStep()">Back</button>
-          <button class="btn" type="button" onclick="submitForm()">Submit</button>
+          <button class="btn" type="submit">Submit</button>
+
         </div>
       </section>
 
@@ -473,7 +476,7 @@
           We can’t wait to see you at the Matric Dance! 🎉
        </p>
       </section>
-
+     </form>
     </main>
 
     <p id="contact">For assistance, contact us at <strong>mjarvis@jeppegirls.co.za</strong></p>
