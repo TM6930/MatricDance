@@ -389,7 +389,7 @@
     </section>
 
     <main class="steps" role="main">
-    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbzhPlWXpkiyx7GRiXOhZ333Dh_s0CRHSjaLt-RxyR4qXGWzK7hZwVmjQvunoQ5Ch06jRg/exec">
+    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbwJM9vq2vzRSd6d0PhjCz6kmclw4zyJsl1RokLbo5Xw-XMpr2EhbwQZZivMpXMzDBYEAg/exec">
      <input type="hidden" name="payload" id="payloadInput" />
 
       <section class="step active" id="step0" aria-labelledby="s0-title">
@@ -736,6 +736,7 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
     const payload = { firstName, lastName, class: studentClass, table: selectedTable, seats: seatsSelected.join(', '), dietary, music, fileName, fileBase64, fileType };
     document.getElementById('payloadInput').value = JSON.stringify(payload);
     e.target.submit();
+    showStep(6);
   } catch(err){
     alert('❌ Submission failed: ' + err.message);
     submitBtn.disabled = false;
