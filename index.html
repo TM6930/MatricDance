@@ -119,7 +119,7 @@
   </section>
 
   <main class="steps" role="main">
-    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbxzd9d84EYGj9HzbU4LQsLxoHLydTU9DqHAVzgUXdyUULmAm97LFhYp7HKwN-gMHB4W/exec">
+    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbxCy3A7JpWE7gV7epIrwy9Xml7OdMdHF-PZcz7t59Ex42PeCRnKB-6gQ_1qZt8j4szt7Q/exec">
       <input type="hidden" name="payload" id="payloadInput" />
 
       <!-- Step 0: Welcome -->
@@ -452,7 +452,14 @@ setInterval(async () => {
       method: 'POST',
       body: new URLSearchParams({ payload: JSON.stringify(payload) })
     });
-    const result = await response.json();
+    let result;
+try {
+  result = await response.json();
+} catch(e){
+  alert("❌ Submission failed: Server did not return valid JSON");
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Submit';
+  return;
 
     if (!result.success) {
       alert("❌ " + result.message);
@@ -479,3 +486,4 @@ setInterval(async () => {
 </script>
 </body>
 </html>
+
