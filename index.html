@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -119,7 +118,7 @@
   </section>
 
   <main class="steps" role="main">
-    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbwJM9vq2vzRSd6d0PhjCz6kmclw4zyJsl1RokLbo5Xw-XMpr2EhbwQZZivMpXMzDBYEAg/exec">
+    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbxzd9d84EYGj9HzbU4LQsLxoHLydTU9DqHAVzgUXdyUULmAm97LFhYp7HKwN-gMHB4W/exec">
       <input type="hidden" name="payload" id="payloadInput" />
 
       <!-- Step 0: Welcome -->
@@ -243,7 +242,14 @@ const bookedSet=new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'));
 
 function saveBookedSet(){ localStorage.setItem(STORAGE_KEY,JSON.stringify([...bookedSet])); }
 
-function showStep(i){ document.querySelectorAll('.step').forEach(s=>s.classList.remove('active')); document.getElementById(`step${i}`).classList.add('active'); currentStep=i; }
+function showStep(i){ 
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active')); 
+  document.getElementById(`step${i}`).classList.add('active'); 
+  currentStep=i; 
+
+  // ✅ Only build confirmation when we land on step 5
+  if(i===5){ showConfirmation(); }
+}
 
 function nextStep(){
   if(currentStep===0){
@@ -380,6 +386,7 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
       const file=fileInput.files[0]; fileName=file.name; fileType=file.type;
       fileBase64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=e=>rej(e); r.readAsDataURL(file); });
     }
+const bookedSeatKeys = seats.map(s=>seatKey(selectedTable,s));
 
     const payload={firstName:f,lastName:l,class:c,table:selectedTable,seats:seats.join(', '),dietary:d,music:m,fileName,fileBase64,fileType};
     document.getElementById('payloadInput').value=JSON.stringify(payload);
