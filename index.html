@@ -224,18 +224,34 @@
 </div>
 
 <script>
-(function initCountdown(){
+(function initCountdown() {
   const el = document.querySelector('.countdown__text');
-  const eventDate = new Date('2025-09-27T19:00:00+02:00').getTime();
+  const eventDate = new Date(2025, 8, 27, 19, 0, 0); // Sept 27, 2025, 19:00
 
-  function tick(){
-    const diff = eventDate - Date.now();
-    if(diff<0){ el.textContent='🎉 The Matric Dance has started! 🎉'; clearInterval(timer); return; }
-    const d=Math.floor(diff/(1000*60*60*24)), h=Math.floor(diff/(1000*60*60)%24), m=Math.floor(diff/(1000*60)%60), s=Math.floor(diff/1000%60);
-    el.textContent=`Matric Dance in: ${d}d ${h}h ${m}m ${s}s ⏰`;
+  let timer; // declare first
+
+  function tick() {
+    const now = new Date();
+    const diff = eventDate - now;
+
+    if (diff <= 0) {
+      el.textContent = '🎉 The Matric Dance has started! 🎉';
+      clearInterval(timer); // now this works
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const minutes = Math.floor((diff / (1000 * 60)) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+
+    el.textContent = `Matric Dance in: ${days}d ${hours}h ${minutes}m ${seconds}s ⏰`;
   }
-  const timer=setInterval(tick,1000); tick();
+
+  tick(); // run immediately
+  timer = setInterval(tick, 1000); // then every second
 })();
+
 
 let currentStep=0, selectedTable=null;
 const totalSteps=6, STORAGE_KEY='mdBookedSeats';
@@ -486,5 +502,6 @@ try {
 </script>
 </body>
 </html>
+
 
 
