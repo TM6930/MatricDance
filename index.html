@@ -225,7 +225,7 @@
 
 <script> 
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFc57Ov-H4UDkBe-HhzFU_dUBFf7AahvE9hO0Y6ajCaVUrIhanDcfKX_gD2EkX3tvrLQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxsPZDMcYFMrruBBBf-gib5U-CPoh1fb5ZCq9zkmyH8aGZgw2RMZ7uJD5bzj1rl7BZKdw/exec';
 let currentStep = 0;
 let selectedTable = null;
 const totalSteps = 6;
@@ -432,11 +432,8 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
   const f = document.getElementById('firstName').value.trim();
   const l = document.getElementById('lastName').value.trim();
   const c = document.getElementById('classSelect').value;
-  const d = document.getElementById('dietary').value.trim();  // ✅ define d here
-  const m = document.getElementById('music').value.trim();    // ✅ define m here
   const t = document.querySelector(`.table[data-id="${selectedTable}"]`);
   const seats = [...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
-
 
   try{
     if(!t || seats.length<1){ throw new Error('Select table and at least 1 seat'); }
@@ -454,6 +451,28 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
         r.readAsDataURL(file);
       });
     }
+
+const latest = await fetchBookedSeats();
+const conflict = seats.find(s => latest.includes(seatKey(selectedTable, s)));
+if(conflict){
+  alert(`Seat ${selectedTable}-${conflict} was just booked by someone else. Please select another seat.`);
+  buildFloor(latest);
+  return;
+}
+const conflict = seats.find(s => latest.includes(seatKey(selectedTable, s)));
+if(conflict){
+  alert(`Seat ${selectedTable}-${conflict} was just booked by someone else. Please select another seat.`);
+  buildFloor(latest);
+  return;
+}
+
+seats.forEach(s=>{
+  const seatEl=t.querySelector(`.seat[data-seat-number="${s}"]`);
+  if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); }
+  bookedSet.add(seatKey(selectedTable,s));
+});
+saveBookedSet();
+
 
     const payload = {firstName:f,lastName:l,class:c,table:selectedTable,seats:seats.join(','),dietary:d,music:m,fileName,fileType,fileBase64};
 
@@ -487,6 +506,5 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
 </script>
 </body>
 </html>
-
 
 
