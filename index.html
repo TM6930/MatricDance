@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -224,7 +225,7 @@
 
 <script> 
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLpbQNWY1dQr5IlttjqA67xEm83HqKxBJ2DNyp4bKLVtJxJDmK4PdL2Wewc-uNdhfGjQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFc57Ov-H4UDkBe-HhzFU_dUBFf7AahvE9hO0Y6ajCaVUrIhanDcfKX_gD2EkX3tvrLQ/exec';
 let currentStep = 0;
 let selectedTable = null;
 const totalSteps = 6;
@@ -248,6 +249,31 @@ async function fetchBookedSeats(){
     return [...bookedSet];
   }
 }
+
+async function refreshBookedSeats() {
+  try {
+    const res = await fetch(SCRIPT_URL);
+    const data = await res.json(); // array of seat keys
+    bookedSet.clear();
+    data.forEach(k => bookedSet.add(k));
+    markBookedSeats();
+  } catch(e) { console.warn(e); }
+}
+
+function markBookedSeats() {
+  document.querySelectorAll('.table').forEach(table => {
+    [...table.querySelectorAll('.seat')].forEach(seat => {
+      const key = seatKey(table.dataset.id, seat.dataset.seatNumber);
+      if(bookedSet.has(key)) {
+        seat.classList.add('booked');
+        seat.classList.remove('selected');
+      }
+    });
+  });
+}
+
+// Poll every 5 seconds
+setInterval(refreshBookedSeats, 5000);
 
 // ---------------- Countdown ----------------
 (function initCountdown() {
@@ -402,16 +428,15 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
   e.preventDefault();
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled=true; btn.textContent='Submitting… ⏳';
+
+  const f = document.getElementById('firstName').value.trim();
+  const l = document.getElementById('lastName').value.trim();
+  const c = document.getElementById('classSelect').value;
+  const t = document.querySelector(`.table[data-id="${selectedTable}"]`);
+  const seats = [...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
+
   try{
-    const f=document.getElementById('firstName').value.trim();
-    const l=document.getElementById('lastName').value.trim();
-    const c=document.getElementById('classSelect').value;
-    const d=document.getElementById('dietary').value.trim();
-    const m=document.getElementById('music').value.trim();
-    const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
-    if(!t){ alert('Select a table'); btn.disabled=false; btn.textContent='Submit'; return; }
-    const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
-    if(seats.length<1){ alert('Select at least 1 seat'); btn.disabled=false; btn.textContent='Submit'; return; }
+    if(!t || seats.length<1){ throw new Error('Select table and at least 1 seat'); }
 
     // File
     const fileInput=document.getElementById('paymentProof');
@@ -427,24 +452,31 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
       });
     }
 
-    const payload={firstName:f,lastName:l,class:c,table:selectedTable,seats:seats.join(','),dietary:d,music:m,fileName,fileType,fileBase64};
+    const payload = {firstName:f,lastName:l,class:c,table:selectedTable,seats:seats.join(','),dietary:d,music:m,fileName,fileType,fileBase64};
 
-    // Submit to Google Apps Script
     const res = await fetch(SCRIPT_URL,{
       method:'POST',
       body: new URLSearchParams({ payload: JSON.stringify(payload) })
     });
+    const data = await res.json();
 
-    alert('✅ Submission complete!');
-    // Mark seats booked locally
-    seats.forEach(s=>{
+    if(!data.success){
+      alert(`❌ ${data.message}`);
+      btn.disabled=false; btn.textContent='Submit';
+      // Refresh booked seats to reflect real-time conflicts
+      const latest = await fetchBookedSeats();
+      buildFloor(latest);
+      return;
+    }
+    
+     seats.forEach(s=>{
       const seatEl=t.querySelector(`.seat[data-seat-number="${s}"]`);
       if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); }
       bookedSet.add(seatKey(selectedTable,s));
     });
     saveBookedSet();
     showStep(6);
-  }catch(err){
+  } catch(err){
     alert('❌ Submission failed: '+err.message);
     btn.disabled=false; btn.textContent='Submit';
   }
