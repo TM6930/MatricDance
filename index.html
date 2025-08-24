@@ -224,50 +224,38 @@
 </div>
 
 <script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwIOreMkn-Cf13CvuMb-LoFrb5E_kfR3_aMMLgQFT2rUVCIylkGPOuAqo7pFtxxRIc-5A/exec';
+let currentStep = 0;
+let selectedTable = null;
+const totalSteps = 6;
+const STORAGE_KEY = 'mdBookedSeats';
+const bookedSet = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'));
+
+function saveBookedSet(){ localStorage.setItem(STORAGE_KEY, JSON.stringify([...bookedSet])); }
+
+// ---------------- Countdown ----------------
 (function initCountdown() {
   const el = document.querySelector('.countdown__text');
-  const eventDate = new Date(2025, 8, 27, 19, 0, 0); // Sept 27, 2025, 19:00
-
-  let timer; // declare first
-
+  const eventDate = new Date(2025, 8, 27, 19, 0, 0); // Sept 27, 2025
   function tick() {
-    const now = new Date();
-    const diff = eventDate - now;
-
-    if (diff <= 0) {
-      el.textContent = '🎉 The Matric Dance has started! 🎉';
-      clearInterval(timer); // now this works
-      return;
-    }
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    const seconds = Math.floor((diff / 1000) % 60);
-
-    el.textContent = `Matric Dance in: ${days}d ${hours}h ${minutes}m ${seconds}s ⏰`;
+    const diff = eventDate - new Date();
+    if(diff <=0){ el.textContent='🎉 The Matric Dance has started! 🎉'; return; }
+    const days=Math.floor(diff/86400000);
+    const hours=Math.floor((diff/3600000)%24);
+    const minutes=Math.floor((diff/60000)%60);
+    const seconds=Math.floor((diff/1000)%60);
+    el.textContent=`Matric Dance in: ${days}d ${hours}h ${minutes}m ${seconds}s ⏰`;
   }
-
-  tick(); // run immediately
-  timer = setInterval(tick, 1000); // then every second
+  tick(); setInterval(tick,1000);
 })();
 
-
-let currentStep=0, selectedTable=null;
-const totalSteps=6, STORAGE_KEY='mdBookedSeats';
-const bookedSet=new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'));
-
-function saveBookedSet(){ localStorage.setItem(STORAGE_KEY,JSON.stringify([...bookedSet])); }
-
-function showStep(i){ 
-  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active')); 
-  document.getElementById(`step${i}`).classList.add('active'); 
-  currentStep=i; 
-
-  // ✅ Only build confirmation when we land on step 5
-  if(i===5){ showConfirmation(); }
+// ---------------- Steps ----------------
+function showStep(i){
+  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+  document.getElementById(`step${i}`).classList.add('active');
+  currentStep = i;
+  if(i===5) showConfirmation();
 }
-
 function nextStep(){
   if(currentStep===0){
     const f=document.getElementById('firstName').value.trim();
@@ -279,17 +267,17 @@ function nextStep(){
     if(!selectedTable){ alert('Please select a table before continuing.'); return; }
     const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
     const seats=[...t.querySelectorAll('.seat.selected')];
-    if(seats.length<1){ alert('Please select at least 1 seat for your table.'); return; }
+    if(seats.length<1){ alert('Please select at least 1 seat.'); return; }
     showConfirmation();
   }
   showStep(Math.min(currentStep+1,totalSteps));
 }
-
 function prevStep(){ showStep(Math.max(currentStep-1,0)); }
+window.nextStep = nextStep; window.prevStep = prevStep;
 
-window.nextStep=nextStep; window.prevStep=prevStep;
-
-const tableData=[
+// ---------------- Floor & Seats ----------------
+const floor = document.getElementById('floorPlan');
+const tableData = [
   {id:1,type:'square',seats:12,top:50,left:50},
   {id:'danceFloor',type:'rectangle',label:'DANCE FLOOR',top:50,left:220,width:520,height:210},
   {id:23,type:'square',seats:12,top:50,left:780},
@@ -316,192 +304,125 @@ const tableData=[
   {id:16,type:'square',seats:12,top:650,left:720}
 ];
 
-const floor=document.getElementById('floorPlan');
-
 function seatKey(tid,sno){ return `${tid}-${sno}`; }
 
-function buildFloor(bookedFromSheet = []) {
-  floor.innerHTML = '';
-  tableData.forEach(t => {
-    if(t.type === 'rectangle'){
-      const d = document.createElement('div');
-      d.className = 'dancefloor'; d.style.top=t.top+'px'; d.style.left=t.left+'px';
-      d.style.width=t.width+'px'; d.style.height=t.height+'px'; d.textContent=t.label||'DANCE FLOOR';
+function buildFloor(bookedFromSheet=[]){
+  floor.innerHTML='';
+  tableData.forEach(t=>{
+    if(t.type==='rectangle'){
+      const d=document.createElement('div');
+      d.className='dancefloor'; d.style.top=t.top+'px'; d.style.left=t.left+'px';
+      d.style.width=t.width+'px'; d.style.height=t.height+'px';
+      d.textContent=t.label||'DANCE FLOOR';
       floor.appendChild(d); return;
     }
-    
-        const table = document.createElement('div');
-    table.className = 'table'; if(t.type==='square') table.classList.add('square');
+    const table=document.createElement('div');
+    table.className='table'; if(t.type==='square') table.classList.add('square');
     table.style.top=t.top+'px'; table.style.left=t.left+'px';
-    table.dataset.id = t.id;
-    const label = document.createElement('div'); label.className='table__label'; label.textContent=t.label||t.id; table.appendChild(label);
-
+    table.dataset.id=t.id;
+    const label=document.createElement('div'); label.className='table__label'; label.textContent=t.label||t.id;
+    table.appendChild(label);
     if(t.seats){
       for(let i=0;i<t.seats;i++){
-        const seat = document.createElement('div'); seat.className='seat';
-        seat.dataset.seatNumber = i+1; seat.title = `Seat ${i+1}`;
-        const key = `${t.id}-${i+1}`;
+        const seat=document.createElement('div'); seat.className='seat'; seat.dataset.seatNumber=i+1;
+        const key = seatKey(t.id,i+1);
         if(bookedSet.has(key) || bookedFromSheet.includes(key)) seat.classList.add('booked');
-        else seat.addEventListener('click', e=>{
+        seat.addEventListener('click',e=>{
           e.stopPropagation();
           const selectedSeats=[...table.querySelectorAll('.seat.selected')];
-          if(!seat.classList.contains('selected') && selectedSeats.length>=2){ alert('Max 2 seats per table.'); return; }
+          if(!seat.classList.contains('selected') && selectedSeats.length>=2){ alert('Max 2 seats per table'); return; }
           seat.classList.toggle('selected');
         });
         table.appendChild(seat);
       }
     }
-
-     table.addEventListener('click', ()=>{ 
-      if(t.type !== 'rectangle') selectedTable = t.id;
-      document.querySelectorAll('.table').forEach(tb => tb.style.transform='scale(1)');
+    table.addEventListener('click',()=>{ 
+      if(t.type!=='rectangle') selectedTable=t.id;
+      document.querySelectorAll('.table').forEach(tb=>tb.style.transform='scale(1)');
       table.style.transform='scale(1.12)';
     });
-
-   floor.appendChild(table);
+    floor.appendChild(table);
   });
 }
 
-buildFloor();
-
+// ---------------- Confirmation ----------------
 function showConfirmation(){
   const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
+  if(!t) return;
   const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
   const f=document.getElementById('firstName').value.trim();
   const l=document.getElementById('lastName').value.trim();
   const c=document.getElementById('classSelect').value;
   const d=document.getElementById('dietary').value.trim();
   const m=document.getElementById('music').value.trim();
-
   document.getElementById('confirmation').innerHTML=`
     <p><strong>Name:</strong> ${f} ${l}</p>
     <p><strong>Class:</strong> ${c}</p>
-    <p><strong>Table Selected:</strong> ${selectedTable}</p>
-    <p><strong>Seats Selected:</strong> ${seats.join(', ')}</p>
-    <p><strong>Dietary Requirements:</strong> ${d||'None'}</p>
-    <p><strong>Music Choices:</strong> ${m||'None'}</p>
-    <p><strong>Note:</strong> Once you submit, selected seats will be permanently booked.</p>
+    <p><strong>Table:</strong> ${selectedTable}</p>
+    <p><strong>Seats:</strong> ${seats.join(', ')}</p>
+    <p><strong>Dietary:</strong> ${d||'None'}</p>
+    <p><strong>Music:</strong> ${m||'None'}</p>
+    <p>Once submitted, seats will be permanently booked.</p>
   `;
 }
 
+// ---------------- Form Submission ----------------
 document.getElementById('mdForm').addEventListener('submit', async function(e){
   e.preventDefault();
-  const submitBtn = e.target.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Submitting… ⏳';
-
-  try {
-    const f = document.getElementById('firstName').value.trim();
-    const l = document.getElementById('lastName').value.trim();
-    const c = document.getElementById('classSelect').value;
-    const d = document.getElementById('dietary').value.trim();
-    const m = document.getElementById('music').value.trim();
-    const t = document.querySelector(`.table[data-id="${selectedTable}"]`);
-    const seats = [...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
-
-    if (!selectedTable || seats.length < 1) {
-      alert("Please select a table and at least one seat.");
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit';
-      return;
-    }
-    
-    seats.forEach(s=>{
-      const seatEl=t.querySelector(`.seat[data-seat-number="${s}"]`);
-      if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); bookedSet.add(seatKey(selectedTable,s)); }
-    });
-    saveBookedSet();
-
-  async function loadBookedSeats() {
-     try {
-    const res = await fetch('https://script.google.com/macros/s/AKfycbwIOreMkn-Cf13CvuMb-LoFrb5E_kfR3_aMMLgQFT2rUVCIylkGPOuAqo7pFtxxRIc-5A/exec');
-    const data = await res.json();
-    if(data.bookedSeatKeys) buildFloor(data.bookedSeatKeys);
-    else buildFloor();
-  } catch(err){
-    console.error('Could not fetch booked seats', err);
-    buildFloor();
-  }
-}
-loadBookedSeats();
-
-setInterval(async () => {
-  try {
-    const res = await fetch(SCRIPT_URL);
-    const booked = await res.json();
-    buildFloor(booked);
-  } catch(err){ console.error(err); }
-}, 5000); // every 5 seconds
-
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled=true; btn.textContent='Submitting… ⏳';
+  try{
+    const f=document.getElementById('firstName').value.trim();
+    const l=document.getElementById('lastName').value.trim();
+    const c=document.getElementById('classSelect').value;
+    const d=document.getElementById('dietary').value.trim();
+    const m=document.getElementById('music').value.trim();
+    const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
+    if(!t){ alert('Select a table'); btn.disabled=false; btn.textContent='Submit'; return; }
+    const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
+    if(seats.length<1){ alert('Select at least 1 seat'); btn.disabled=false; btn.textContent='Submit'; return; }
 
     // File
-    const fileInput = document.getElementById('paymentProof');
-    let fileBase64 = '', fileName = '', fileType = '';
-    if(fileInput.files.length > 0){
-      const file = fileInput.files[0];
-      fileName = file.name;
-      fileType = file.type;
-      fileBase64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result.split(',')[1]);
-        r.onerror = e => rej(e);
+    const fileInput=document.getElementById('paymentProof');
+    let fileBase64='', fileName='', fileType='';
+    if(fileInput.files.length>0){
+      const file=fileInput.files[0];
+      fileName=file.name; fileType=file.type;
+      fileBase64=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(r.result.split(',')[1]);
+        r.onerror=e=>rej(e);
         r.readAsDataURL(file);
       });
     }
 
-    const payload = {
-      firstName: f,
-      lastName: l,
-      class: c,
-      table: selectedTable,
-      seats: seats.join(', '),
-      dietary: d,
-      music: m,
-      fileName,
-      fileBase64,
-      fileType
-    };
-    document.getElementById('payloadInput').value = JSON.stringify(payload);
+    const payload={firstName:f,lastName:l,class:c,table:selectedTable,seats:seats.join(','),dietary:d,music:m,fileName,fileType,fileBase64};
 
-    // Submit via fetch to get JSON response
-    const response = await fetch(e.target.action, {
-      method: 'POST',
+    // Submit to Google Apps Script
+    const res = await fetch(SCRIPT_URL,{
+      method:'POST',
       body: new URLSearchParams({ payload: JSON.stringify(payload) })
     });
-    let result;
-try {
-  result = await response.json();
-} catch(e){
-  alert("❌ Submission failed: Server did not return valid JSON");
-  submitBtn.disabled = false;
-  submitBtn.textContent = 'Submit';
-  return;
 
-    if (!result.success) {
-      alert("❌ " + result.message);
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit';
-      return;
-    }
-
-    // Mark seats as booked locally
-    seats.forEach(s => {
-      const seatEl = t.querySelector(`.seat[data-seat-number="${s}"]`);
-      if(seatEl) { seatEl.classList.remove('selected'); seatEl.classList.add('booked'); }
-      bookedSet.add(`${selectedTable}-${s}`);
+    alert('✅ Submission complete!');
+    // Mark seats booked
+    seats.forEach(s=>{
+      const seatEl=t.querySelector(`.seat[data-seat-number="${s}"]`);
+      if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); }
+      bookedSet.add(seatKey(selectedTable,s));
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...bookedSet]));
-
-    showStep(6); // Show thank you step
-  } catch (err) {
-    alert('❌ Submission failed: ' + err.message);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Submit';
+    saveBookedSet();
+    showStep(6);
+  }catch(err){
+    alert('❌ Submission failed: '+err.message);
+    btn.disabled=false; btn.textContent='Submit';
   }
 });
+
+buildFloor();
 </script>
+
 </body>
 </html>
-
 
 
