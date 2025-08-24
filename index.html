@@ -119,7 +119,7 @@
   </section>
 
   <main class="steps" role="main">
-    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbxCy3A7JpWE7gV7epIrwy9Xml7OdMdHF-PZcz7t59Ex42PeCRnKB-6gQ_1qZt8j4szt7Q/exec">
+    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbwIOreMkn-Cf13CvuMb-LoFrb5E_kfR3_aMMLgQFT2rUVCIylkGPOuAqo7pFtxxRIc-5A/exec">
       <input type="hidden" name="payload" id="payloadInput" />
 
       <!-- Step 0: Welcome -->
@@ -398,7 +398,7 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
 
   async function loadBookedSeats() {
      try {
-    const res = await fetch('https://script.google.com/macros/s/AKfycbxCy3A7JpWE7gV7epIrwy9Xml7OdMdHF-PZcz7t59Ex42PeCRnKB-6gQ_1qZt8j4szt7Q/exec');
+    const res = await fetch('https://script.google.com/macros/s/AKfycbwIOreMkn-Cf13CvuMb-LoFrb5E_kfR3_aMMLgQFT2rUVCIylkGPOuAqo7pFtxxRIc-5A/exec');
     const data = await res.json();
     if(data.bookedSeatKeys) buildFloor(data.bookedSeatKeys);
     else buildFloor();
@@ -486,4 +486,5 @@ try {
 </script>
 </body>
 </html>
+
 
