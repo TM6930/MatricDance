@@ -119,7 +119,7 @@
   </section>
 
   <main class="steps" role="main">
-    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbyh-inX_cTZgJJujhV04nHDyE-ND_uPJK3UkzKrHNKcBMAcHFV4NGAeUZnZJaLU2WxC8w/exec">
+    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbxzd9d84EYGj9HzbU4LQsLxoHLydTU9DqHAVzgUXdyUULmAm97LFhYp7HKwN-gMHB4W/exec">
       <input type="hidden" name="payload" id="payloadInput" />
 
       <!-- Step 0: Welcome -->
@@ -304,25 +304,28 @@ const floor=document.getElementById('floorPlan');
 
 function seatKey(tid,sno){ return `${tid}-${sno}`; }
 
-function buildFloor(){
-  floor.innerHTML='';
-  tableData.forEach(t=>{
-    if(t.type==='rectangle'){
-      const d=document.createElement('div');
-      d.className='dancefloor'; d.style.top=t.top+'px'; d.style.left=t.left+'px';
+function buildFloor(bookedFromSheet = []) {
+  floor.innerHTML = '';
+  tableData.forEach(t => {
+    if(t.type === 'rectangle'){
+      const d = document.createElement('div');
+      d.className = 'dancefloor'; d.style.top=t.top+'px'; d.style.left=t.left+'px';
       d.style.width=t.width+'px'; d.style.height=t.height+'px'; d.textContent=t.label||'DANCE FLOOR';
       floor.appendChild(d); return;
     }
-    const table=document.createElement('div');
-    table.className='table'; if(t.type==='square') table.classList.add('square');
-    table.style.top=t.top+'px'; table.style.left=t.left+'px'; table.dataset.id=t.id;
-    const label=document.createElement('div'); label.className='table__label'; label.textContent=t.label||t.id; table.appendChild(label);
+    
+        const table = document.createElement('div');
+    table.className = 'table'; if(t.type==='square') table.classList.add('square');
+    table.style.top=t.top+'px'; table.style.left=t.left+'px';
+    table.dataset.id = t.id;
+    const label = document.createElement('div'); label.className='table__label'; label.textContent=t.label||t.id; table.appendChild(label);
 
     if(t.seats){
       for(let i=0;i<t.seats;i++){
-        const seat=document.createElement('div'); seat.className='seat';
-        seat.dataset.seatNumber=i+1; seat.title=`Seat ${i+1}`;
-        if(bookedSet.has(seatKey(t.id,i+1))) seat.classList.add('booked');
+        const seat = document.createElement('div'); seat.className='seat';
+        seat.dataset.seatNumber = i+1; seat.title = `Seat ${i+1}`;
+        const key = `${t.id}-${i+1}`;
+        if(bookedSet.has(key) || bookedFromSheet.includes(key)) seat.classList.add('booked');
         else seat.addEventListener('click', e=>{
           e.stopPropagation();
           const selectedSeats=[...table.querySelectorAll('.seat.selected')];
@@ -333,10 +336,16 @@ function buildFloor(){
       }
     }
 
-    table.addEventListener('click',()=>{ selectedTable=t.id; document.querySelectorAll('.table').forEach(tb=>tb.style.transform='scale(1)'); table.style.transform='scale(1.12)'; });
-    floor.appendChild(table);
+     table.addEventListener('click', ()=>{ 
+      if(t.type !== 'rectangle') selectedTable = t.id;
+      document.querySelectorAll('.table').forEach(tb => tb.style.transform='scale(1)');
+      table.style.transform='scale(1.12)';
+    });
+
+   floor.appendChild(table);
   });
 }
+
 buildFloor();
 
 function showConfirmation(){
@@ -386,6 +395,28 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
       if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); bookedSet.add(seatKey(selectedTable,s)); }
     });
     saveBookedSet();
+
+  async function loadBookedSeats() {
+     try {
+    const res = await fetch('https://script.google.com/macros/s/AKfycbxCy3A7JpWE7gV7epIrwy9Xml7OdMdHF-PZcz7t59Ex42PeCRnKB-6gQ_1qZt8j4szt7Q/exec');
+    const data = await res.json();
+    if(data.bookedSeatKeys) buildFloor(data.bookedSeatKeys);
+    else buildFloor();
+  } catch(err){
+    console.error('Could not fetch booked seats', err);
+    buildFloor();
+  }
+}
+loadBookedSeats();
+
+setInterval(async () => {
+  try {
+    const res = await fetch(SCRIPT_URL);
+    const booked = await res.json();
+    buildFloor(booked);
+  } catch(err){ console.error(err); }
+}, 5000); // every 5 seconds
+
 
     // File
     const fileInput = document.getElementById('paymentProof');
