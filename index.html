@@ -432,8 +432,11 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
   const f = document.getElementById('firstName').value.trim();
   const l = document.getElementById('lastName').value.trim();
   const c = document.getElementById('classSelect').value;
+  const d = document.getElementById('dietary').value.trim();  // ✅ define d here
+  const m = document.getElementById('music').value.trim();    // ✅ define m here
   const t = document.querySelector(`.table[data-id="${selectedTable}"]`);
   const seats = [...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
+
 
   try{
     if(!t || seats.length<1){ throw new Error('Select table and at least 1 seat'); }
@@ -484,5 +487,6 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
 </script>
 </body>
 </html>
+
 
 
