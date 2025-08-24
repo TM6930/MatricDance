@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -223,8 +222,9 @@
   </section>
 </div>
 
-<script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwIOreMkn-Cf13CvuMb-LoFrb5E_kfR3_aMMLgQFT2rUVCIylkGPOuAqo7pFtxxRIc-5A/exec';
+<script> 
+
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLpbQNWY1dQr5IlttjqA67xEm83HqKxBJ2DNyp4bKLVtJxJDmK4PdL2Wewc-uNdhfGjQ/exec';
 let currentStep = 0;
 let selectedTable = null;
 const totalSteps = 6;
@@ -233,10 +233,26 @@ const bookedSet = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'));
 
 function saveBookedSet(){ localStorage.setItem(STORAGE_KEY, JSON.stringify([...bookedSet])); }
 
+function seatKey(tid,sno){ return `${tid}-${sno}`; }
+
+// Fetch booked seats from server
+async function fetchBookedSeats(){
+  try{
+    const res = await fetch(`${SCRIPT_URL}?action=getBookedSeats`);
+    const data = await res.json(); // expects JSON array of seat keys ["1-1","2-3",...]
+    data.forEach(k=>bookedSet.add(k));
+    saveBookedSet();
+    return [...bookedSet];
+  }catch(err){
+    console.warn('Failed to fetch booked seats:', err);
+    return [...bookedSet];
+  }
+}
+
 // ---------------- Countdown ----------------
 (function initCountdown() {
   const el = document.querySelector('.countdown__text');
-  const eventDate = new Date(2025, 8, 27, 19, 0, 0); // Sept 27, 2025
+  const eventDate = new Date(2025, 8, 27, 19, 0, 0);
   function tick() {
     const diff = eventDate - new Date();
     if(diff <=0){ el.textContent='🎉 The Matric Dance has started! 🎉'; return; }
@@ -304,8 +320,6 @@ const tableData = [
   {id:16,type:'square',seats:12,top:650,left:720}
 ];
 
-function seatKey(tid,sno){ return `${tid}-${sno}`; }
-
 function buildFloor(bookedFromSheet=[]){
   floor.innerHTML='';
   tableData.forEach(t=>{
@@ -322,13 +336,15 @@ function buildFloor(bookedFromSheet=[]){
     table.dataset.id=t.id;
     const label=document.createElement('div'); label.className='table__label'; label.textContent=t.label||t.id;
     table.appendChild(label);
+
     if(t.seats){
       for(let i=0;i<t.seats;i++){
         const seat=document.createElement('div'); seat.className='seat'; seat.dataset.seatNumber=i+1;
         const key = seatKey(t.id,i+1);
-        if(bookedSet.has(key) || bookedFromSheet.includes(key)) seat.classList.add('booked');
+        if(bookedFromSheet.includes(key)) seat.classList.add('booked');
         seat.addEventListener('click',e=>{
           e.stopPropagation();
+          if(seat.classList.contains('booked')) return;
           const selectedSeats=[...table.querySelectorAll('.seat.selected')];
           if(!seat.classList.contains('selected') && selectedSeats.length>=2){ alert('Max 2 seats per table'); return; }
           seat.classList.toggle('selected');
@@ -344,6 +360,21 @@ function buildFloor(bookedFromSheet=[]){
     floor.appendChild(table);
   });
 }
+
+// Initialize floor with booked seats
+(async function initFloor() {
+  const booked = await fetchBookedSeats();
+  buildFloor(booked);
+
+  // Poll every 5 seconds to update booked seats in real-time
+  setInterval(async () => {
+    const latest = await fetchBookedSeats();
+    document.querySelectorAll('.seat').forEach(seat=>{
+      const key = seatKey(seat.closest('.table').dataset.id, seat.dataset.seatNumber);
+      if(latest.includes(key)) seat.classList.add('booked');
+    });
+  }, 5000);
+})();
 
 // ---------------- Confirmation ----------------
 function showConfirmation(){
@@ -405,7 +436,7 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
     });
 
     alert('✅ Submission complete!');
-    // Mark seats booked
+    // Mark seats booked locally
     seats.forEach(s=>{
       const seatEl=t.querySelector(`.seat[data-seat-number="${s}"]`);
       if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); }
@@ -418,10 +449,7 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
     btn.disabled=false; btn.textContent='Submit';
   }
 });
-
-buildFloor();
 </script>
-
 </body>
 </html>
 
