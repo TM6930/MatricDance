@@ -223,57 +223,39 @@
   </section>
 </div>
 
-<script> 
-
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLpbQNWY1dQr5IlttjqA67xEm83HqKxBJ2DNyp4bKLVtJxJDmK4PdL2Wewc-uNdhfGjQ/exec';
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzgCHA9-Oxic65uV9iICMmUgYkcehKaBWrD0ZnhIgWUnBHyA1ndQkO4QqaT_EYsQ8wjKQ/exec';
 let currentStep = 0;
 let selectedTable = null;
 const totalSteps = 6;
-const STORAGE_KEY = 'mdBookedSeats';
-const bookedSet = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'));
 
-function saveBookedSet(){ localStorage.setItem(STORAGE_KEY, JSON.stringify([...bookedSet])); }
+// ---------------- Seat Helpers ----------------
+function seatKey(tid, sno) { return `${tid}-${sno}`; }
 
-function seatKey(tid,sno){ return `${tid}-${sno}`; }
-
-// Fetch booked seats from server
-async function fetchBookedSeats(){
-  try{
+// Always fetch booked seats from server
+async function fetchBookedSeats() {
+  try {
     const res = await fetch(`${SCRIPT_URL}?action=getBookedSeats`);
-    const data = await res.json(); // expects JSON array of seat keys ["1-1","2-3",...]
-    data.forEach(k=>bookedSet.add(k));
-    saveBookedSet();
-    return [...bookedSet];
-  }catch(err){
+    const data = await res.json(); // expects ["1-1","2-3",...]
+    return data;
+  } catch (err) {
     console.warn('Failed to fetch booked seats:', err);
-    return [...bookedSet];
+    return [];
   }
 }
 
-async function refreshBookedSeats() {
-  try {
-    const res = await fetch(SCRIPT_URL);
-    const data = await res.json(); // array of seat keys
-    bookedSet.clear();
-    data.forEach(k => bookedSet.add(k));
-    markBookedSeats();
-  } catch(e) { console.warn(e); }
-}
-
-function markBookedSeats() {
-  document.querySelectorAll('.table').forEach(table => {
-    [...table.querySelectorAll('.seat')].forEach(seat => {
-      const key = seatKey(table.dataset.id, seat.dataset.seatNumber);
-      if(bookedSet.has(key)) {
-        seat.classList.add('booked');
-        seat.classList.remove('selected');
-      }
-    });
+// Update seat classes based on booked set
+function markBookedSeats(bookedSet) {
+  document.querySelectorAll('.seat').forEach(seat => {
+    const key = seatKey(seat.closest('.table').dataset.id, seat.dataset.seatNumber);
+    if (bookedSet.includes(key)) {
+      seat.classList.add('booked');
+      seat.classList.remove('selected');
+    } else {
+      seat.classList.remove('booked');
+    }
   });
 }
-
-// Poll every 5 seconds
-setInterval(refreshBookedSeats, 5000);
 
 // ---------------- Countdown ----------------
 (function initCountdown() {
@@ -281,40 +263,40 @@ setInterval(refreshBookedSeats, 5000);
   const eventDate = new Date(2025, 8, 27, 19, 0, 0);
   function tick() {
     const diff = eventDate - new Date();
-    if(diff <=0){ el.textContent='🎉 The Matric Dance has started! 🎉'; return; }
-    const days=Math.floor(diff/86400000);
-    const hours=Math.floor((diff/3600000)%24);
-    const minutes=Math.floor((diff/60000)%60);
-    const seconds=Math.floor((diff/1000)%60);
-    el.textContent=`Matric Dance in: ${days}d ${hours}h ${minutes}m ${seconds}s ⏰`;
+    if (diff <= 0) { el.textContent = '🎉 The Matric Dance has started! 🎉'; return; }
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff / 3600000) % 24);
+    const minutes = Math.floor((diff / 60000) % 60);
+    const seconds = Math.floor((diff / 1000) % 60);
+    el.textContent = `Matric Dance in: ${days}d ${hours}h ${minutes}m ${seconds}s ⏰`;
   }
-  tick(); setInterval(tick,1000);
+  tick(); setInterval(tick, 1000);
 })();
 
 // ---------------- Steps ----------------
-function showStep(i){
-  document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
+function showStep(i) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
   document.getElementById(`step${i}`).classList.add('active');
   currentStep = i;
-  if(i===5) showConfirmation();
+  if (i === 5) showConfirmation();
 }
-function nextStep(){
-  if(currentStep===0){
-    const f=document.getElementById('firstName').value.trim();
-    const l=document.getElementById('lastName').value.trim();
-    const c=document.getElementById('classSelect').value;
-    if(!f||!l||!c){ alert('Please fill in your name, surname, and class.'); return; }
+function nextStep() {
+  if (currentStep === 0) {
+    const f = document.getElementById('firstName').value.trim();
+    const l = document.getElementById('lastName').value.trim();
+    const c = document.getElementById('classSelect').value;
+    if (!f || !l || !c) { alert('Please fill in your name, surname, and class.'); return; }
   }
-  if(currentStep===2){
-    if(!selectedTable){ alert('Please select a table before continuing.'); return; }
-    const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
-    const seats=[...t.querySelectorAll('.seat.selected')];
-    if(seats.length<1){ alert('Please select at least 1 seat.'); return; }
+  if (currentStep === 2) {
+    if (!selectedTable) { alert('Please select a table before continuing.'); return; }
+    const t = document.querySelector(`.table[data-id="${selectedTable}"]`);
+    const seats = [...t.querySelectorAll('.seat.selected')];
+    if (seats.length < 1) { alert('Please select at least 1 seat.'); return; }
     showConfirmation();
   }
-  showStep(Math.min(currentStep+1,totalSteps));
+  showStep(Math.min(currentStep + 1, totalSteps));
 }
-function prevStep(){ showStep(Math.max(currentStep-1,0)); }
+function prevStep() { showStep(Math.max(currentStep - 1, 0)); }
 window.nextStep = nextStep; window.prevStep = prevStep;
 
 // ---------------- Floor & Seats ----------------
@@ -346,40 +328,43 @@ const tableData = [
   {id:16,type:'square',seats:12,top:650,left:720}
 ];
 
-function buildFloor(bookedFromSheet=[]){
-  floor.innerHTML='';
-  tableData.forEach(t=>{
-    if(t.type==='rectangle'){
-      const d=document.createElement('div');
-      d.className='dancefloor'; d.style.top=t.top+'px'; d.style.left=t.left+'px';
-      d.style.width=t.width+'px'; d.style.height=t.height+'px';
-      d.textContent=t.label||'DANCE FLOOR';
+function buildFloor(bookedFromSheet=[]) {
+  floor.innerHTML = '';
+  tableData.forEach(t => {
+    if (t.type === 'rectangle') {
+      const d = document.createElement('div');
+      d.className = 'dancefloor';
+      d.style.top = t.top+'px'; d.style.left = t.left+'px';
+      d.style.width = t.width+'px'; d.style.height = t.height+'px';
+      d.textContent = t.label || 'DANCE FLOOR';
       floor.appendChild(d); return;
     }
-    const table=document.createElement('div');
-    table.className='table'; if(t.type==='square') table.classList.add('square');
-    table.style.top=t.top+'px'; table.style.left=t.left+'px';
-    table.dataset.id=t.id;
-    const label=document.createElement('div'); label.className='table__label'; label.textContent=t.label||t.id;
+    const table = document.createElement('div');
+    table.className = 'table'; if (t.type==='square') table.classList.add('square');
+    table.style.top = t.top+'px'; table.style.left = t.left+'px';
+    table.dataset.id = t.id;
+    const label = document.createElement('div'); label.className='table__label'; label.textContent=t.label||t.id;
     table.appendChild(label);
 
-    if(t.seats){
-      for(let i=0;i<t.seats;i++){
+    if (t.seats) {
+      for (let i=0;i<t.seats;i++) {
         const seat=document.createElement('div'); seat.className='seat'; seat.dataset.seatNumber=i+1;
         const key = seatKey(t.id,i+1);
-        if(bookedFromSheet.includes(key)) seat.classList.add('booked');
+        if (bookedFromSheet.includes(key)) seat.classList.add('booked');
         seat.addEventListener('click',e=>{
           e.stopPropagation();
-          if(seat.classList.contains('booked')) return;
+          if (seat.classList.contains('booked')) return;
           const selectedSeats=[...table.querySelectorAll('.seat.selected')];
-          if(!seat.classList.contains('selected') && selectedSeats.length>=2){ alert('Max 2 seats per table'); return; }
+          if (!seat.classList.contains('selected') && selectedSeats.length>=2) { 
+            alert('Max 2 seats per table'); return; 
+          }
           seat.classList.toggle('selected');
         });
         table.appendChild(seat);
       }
     }
     table.addEventListener('click',()=>{ 
-      if(t.type!=='rectangle') selectedTable=t.id;
+      if (t.type!=='rectangle') selectedTable=t.id;
       document.querySelectorAll('.table').forEach(tb=>tb.style.transform='scale(1)');
       table.style.transform='scale(1.12)';
     });
@@ -387,25 +372,20 @@ function buildFloor(bookedFromSheet=[]){
   });
 }
 
-// Initialize floor with booked seats
+// Init + polling
 (async function initFloor() {
   const booked = await fetchBookedSeats();
   buildFloor(booked);
-
-  // Poll every 5 seconds to update booked seats in real-time
   setInterval(async () => {
     const latest = await fetchBookedSeats();
-    document.querySelectorAll('.seat').forEach(seat=>{
-      const key = seatKey(seat.closest('.table').dataset.id, seat.dataset.seatNumber);
-      if(latest.includes(key)) seat.classList.add('booked');
-    });
+    markBookedSeats(latest);
   }, 5000);
 })();
 
 // ---------------- Confirmation ----------------
-function showConfirmation(){
+function showConfirmation() {
   const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
-  if(!t) return;
+  if (!t) return;
   const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
   const f=document.getElementById('firstName').value.trim();
   const l=document.getElementById('lastName').value.trim();
@@ -427,119 +407,66 @@ function showConfirmation(){
 document.getElementById('mdForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   const submitBtn = e.target.querySelector('button[type="submit"]');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Submitting… ⏳';
+  submitBtn.disabled = true; submitBtn.textContent = 'Submitting… ⏳';
 
   try {
-    const f = document.getElementById('firstName').value.trim();
-    const l = document.getElementById('lastName').value.trim();
-    const c = document.getElementById('classSelect').value;
-    const d = document.getElementById('dietary').value.trim();
-    const m = document.getElementById('music').value.trim();
-    const t = document.querySelector(`.table[data-id="${selectedTable}"]`);
-    const seats = [...t.querySelectorAll('.seat.selected')].map(s => s.dataset.seatNumber);
+    const f=document.getElementById('firstName').value.trim();
+    const l=document.getElementById('lastName').value.trim();
+    const c=document.getElementById('classSelect').value;
+    const d=document.getElementById('dietary').value.trim();
+    const m=document.getElementById('music').value.trim();
+    const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
+    const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
 
-    if (!selectedTable || seats.length < 1) {
+    if (!selectedTable || seats.length<1) {
       alert("Please select a table and at least one seat.");
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit';
-      return;
+      submitBtn.disabled=false; submitBtn.textContent='Submit'; return;
     }
-    // File
-    const fileInput = document.getElementById('paymentProof');
-    let fileBase64 = '', fileName = '', fileType = '';
-    if(fileInput.files.length > 0){
-      const file = fileInput.files[0];
-      fileName = file.name;
-      fileType = file.type;
-      fileBase64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result.split(',')[1]);
-        r.onerror = e => rej(e);
+
+    // File upload
+    const fileInput=document.getElementById('paymentProof');
+    let fileBase64='', fileName='', fileType='';
+    if(fileInput.files.length>0){
+      const file=fileInput.files[0];
+      fileName=file.name; fileType=file.type;
+      fileBase64=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(r.result.split(',')[1]);
+        r.onerror=e=>rej(e);
         r.readAsDataURL(file);
       });
     }
-const payload = {
-      firstName: f,
-      lastName: l,
-      class: c,
-      table: selectedTable,
-      seats: seats.join(','),
-      dietary: d,
-      music: m,
-      fileName,
-      fileBase64,
-      fileType
-    };
 
-const latest = await fetchBookedSeats();
-const conflict = seats.find(s => latest.includes(seatKey(selectedTable, s)));
-if(conflict){
-  alert(`Seat ${selectedTable}-${conflict} was just booked by someone else. Please select another seat.`);
-  buildFloor(latest);
-  return;
-}
-const conflict = seats.find(s => latest.includes(seatKey(selectedTable, s)));
-if(conflict){
-  alert(`Seat ${selectedTable}-${conflict} was just booked by someone else. Please select another seat.`);
-  buildFloor(latest);
-  return;
-}
-
-seats.forEach(s=>{
-  const seatEl=t.querySelector(`.seat[data-seat-number="${s}"]`);
-  if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); }
-  bookedSet.add(seatKey(selectedTable,s));
-});
-saveBookedSet();
-
-
-    const payload = {firstName:f,lastName:l,class:c,table:selectedTable,seats:seats.join(','),dietary:d,music:m,fileName,fileType,fileBase64};
+    const payload={ firstName:f, lastName:l, class:c, table:selectedTable,
+      seats:seats.join(','), dietary:d, music:m, fileName, fileBase64, fileType };
 
     const response = await fetch(e.target.action, {
-      method: 'POST',
-      body: new URLSearchParams({ payload: JSON.stringify(payload) })
+      method:'POST',
+      body:new URLSearchParams({ payload: JSON.stringify(payload) })
     });
-    const result = await response.json();
+    const result=await response.json();
 
     if (!result.success) {
       alert("❌ " + result.message);
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit';
-      // Force reload booked seats from Sheet in case they were taken
-      const latest = await fetchBookedSeats();
-      buildFloor(latest);
-      return;
+      submitBtn.disabled=false; submitBtn.textContent='Submit';
+      const latest=await fetchBookedSeats();
+      buildFloor(latest); return;
     }
-    
-    seats.forEach(s => {
-      const seatEl = t.querySelector(`.seat[data-seat-number="${s}"]`);
-      if(seatEl) { 
-        seatEl.classList.remove('selected'); 
-        seatEl.classList.add('booked'); 
-      }
-      bookedSet.add(`${selectedTable}-${s}`);
-    });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...bookedSet]));
 
-    
-     seats.forEach(s=>{
-      const seatEl=t.querySelector(`.seat[data-seat-number="${s}"]`);
-      if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); }
-      bookedSet.add(seatKey(selectedTable,s));
-    });
-  const latest = await fetchBookedSeats();
+    // Refresh seat map from server truth
+    const latest=await fetchBookedSeats();
     buildFloor(latest);
 
-    showStep(6); // Show thank you step
+    showStep(6); // thank you
   } catch (err) {
     alert('❌ Submission failed: ' + err.message);
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Submit';
+    submitBtn.disabled=false; submitBtn.textContent='Submit';
   }
 });
 </script>
+
 </body>
 </html>
+
 
 
