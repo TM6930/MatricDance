@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -118,7 +119,7 @@
   </section>
 
   <main class="steps" role="main">
-    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbxzd9d84EYGj9HzbU4LQsLxoHLydTU9DqHAVzgUXdyUULmAm97LFhYp7HKwN-gMHB4W/exec">
+    <form id="mdForm" method="POST" action="https://script.google.com/macros/s/AKfycbyh-inX_cTZgJJujhV04nHDyE-ND_uPJK3UkzKrHNKcBMAcHFV4NGAeUZnZJaLU2WxC8w/exec">
       <input type="hidden" name="payload" id="payloadInput" />
 
       <!-- Step 0: Welcome -->
@@ -360,19 +361,26 @@ function showConfirmation(){
 
 document.getElementById('mdForm').addEventListener('submit', async function(e){
   e.preventDefault();
-  const submitBtn=e.target.querySelector('button[type="submit"]');
-  submitBtn.disabled=true; submitBtn.textContent='Submitting… ⏳';
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting… ⏳';
 
-  try{
-    const f=document.getElementById('firstName').value.trim();
-    const l=document.getElementById('lastName').value.trim();
-    const c=document.getElementById('classSelect').value;
-    const d=document.getElementById('dietary').value.trim();
-    const m=document.getElementById('music').value.trim();
-    const t=document.querySelector(`.table[data-id="${selectedTable}"]`);
-    const seats=[...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
+  try {
+    const f = document.getElementById('firstName').value.trim();
+    const l = document.getElementById('lastName').value.trim();
+    const c = document.getElementById('classSelect').value;
+    const d = document.getElementById('dietary').value.trim();
+    const m = document.getElementById('music').value.trim();
+    const t = document.querySelector(`.table[data-id="${selectedTable}"]`);
+    const seats = [...t.querySelectorAll('.seat.selected')].map(s=>s.dataset.seatNumber);
 
-    // Book seats
+    if (!selectedTable || seats.length < 1) {
+      alert("Please select a table and at least one seat.");
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit';
+      return;
+    }
+    
     seats.forEach(s=>{
       const seatEl=t.querySelector(`.seat[data-seat-number="${s}"]`);
       if(seatEl){ seatEl.classList.remove('selected'); seatEl.classList.add('booked'); bookedSet.add(seatKey(selectedTable,s)); }
@@ -380,19 +388,62 @@ document.getElementById('mdForm').addEventListener('submit', async function(e){
     saveBookedSet();
 
     // File
-    const fileInput=document.getElementById('paymentProof');
-    let fileBase64='',fileName='',fileType='';
-    if(fileInput.files.length>0){
-      const file=fileInput.files[0]; fileName=file.name; fileType=file.type;
-      fileBase64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(',')[1]); r.onerror=e=>rej(e); r.readAsDataURL(file); });
+    const fileInput = document.getElementById('paymentProof');
+    let fileBase64 = '', fileName = '', fileType = '';
+    if(fileInput.files.length > 0){
+      const file = fileInput.files[0];
+      fileName = file.name;
+      fileType = file.type;
+      fileBase64 = await new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(',')[1]);
+        r.onerror = e => rej(e);
+        r.readAsDataURL(file);
+      });
     }
-const bookedSeatKeys = seats.map(s=>seatKey(selectedTable,s));
 
-    const payload={firstName:f,lastName:l,class:c,table:selectedTable,seats:seats.join(', '),dietary:d,music:m,fileName,fileBase64,fileType};
-    document.getElementById('payloadInput').value=JSON.stringify(payload);
-    e.target.submit();
-    showStep(6);
-  }catch(err){ alert('❌ Submission failed: '+err.message); submitBtn.disabled=false; submitBtn.textContent='Submit'; }
+    const payload = {
+      firstName: f,
+      lastName: l,
+      class: c,
+      table: selectedTable,
+      seats: seats.join(', '),
+      dietary: d,
+      music: m,
+      fileName,
+      fileBase64,
+      fileType
+    };
+    document.getElementById('payloadInput').value = JSON.stringify(payload);
+
+    // Submit via fetch to get JSON response
+    const response = await fetch(e.target.action, {
+      method: 'POST',
+      body: new URLSearchParams({ payload: JSON.stringify(payload) })
+    });
+    const result = await response.json();
+
+    if (!result.success) {
+      alert("❌ " + result.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit';
+      return;
+    }
+
+    // Mark seats as booked locally
+    seats.forEach(s => {
+      const seatEl = t.querySelector(`.seat[data-seat-number="${s}"]`);
+      if(seatEl) { seatEl.classList.remove('selected'); seatEl.classList.add('booked'); }
+      bookedSet.add(`${selectedTable}-${s}`);
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...bookedSet]));
+
+    showStep(6); // Show thank you step
+  } catch (err) {
+    alert('❌ Submission failed: ' + err.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit';
+  }
 });
 </script>
 </body>
